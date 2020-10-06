@@ -1,0 +1,20 @@
+#' Bivariate longitudinal health outcomes \code{Y1} and \code{Y2}.
+#'
+#' A dataset called \emph{growth} containing longitudinal measurements of \code{Y1} and \code{Y2}, a visit process \code{D}, and to correspond to \code{Y1} and \code{Y2}, response processes given a clinic visit \code{M1} and \code{M2}. Based on a 2-latent class model, this dataset was generated using the \code{simdat} function in the package. The visit process was assumed to be missing not at random, and \code{M2} was assumed to be missing not at random. \code{Y1} is assumed to be fully observed given a clinic visit.
+#'
+#' @format A data frame with 173 subjects followed over 9 time windows. Twenty-seven subjects fell out of the dataset due to having no follow-up clinic visits.
+#'
+#' \describe{
+#' \item{subjectID}{Subject identifier for each measurement}
+#' \item{time}{Time variable indicating time window of measurement from 1 to 8, centered and scaled}
+#' \item{birthweight}{Simulated birthweight of each subject, centered and scaled}
+#' \item{Y1}{Longitudinal measurements of \code{Y1}}
+#' \item{Y2}{Longitudinal measurements of \code{Y2}}
+#' \item{YC1}{Longitudinal measurements of \code{Y1} without missing values}
+#' \item{YC2}{Longitudinal measurements of \code{Y2} without missing values}
+#' \item{D}{Binary indicator for the visit process, equal to 1 if a visit is observed, and 0 otherwise}
+#' \item{M1}{Binary indicator for the response process for \code{Y1}, equal to 1 if a response is observed given a clinic visit, and 0 otherwise. \code{M1} always equals 1 when \code{D=1}. \code{M1} is \code{NA} when \code{D = 0}.}
+#' \item{M2}{Binary indicator for the response process for \code{Y2}, equal to 1 if a response is observed given a clinic visit, and 0 otherwise. \code{M2} is \code{NA} when \code{D = 0}.}
+#' \item{Class}{A categorical variable equal to 1 or 2 to indicate each subject's latent class membership.}
+#' }
+"growth"
