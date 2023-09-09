@@ -4,8 +4,17 @@
 \alias{update_SigmaLC}
 \title{Update variance-covariance matrix \code{Sigma} of the \code{Y1,\dots,YJ}.}
 \usage{
-update_SigmaLC(C, betaObs, bSub, Y, XRe, XObs, prior.scale, prior.df,
-  subjectID)
+update_SigmaLC(
+  C,
+  betaObs,
+  bSub,
+  Y,
+  XRe,
+  XObs,
+  prior.scale,
+  prior.df,
+  subjectID
+)
 }
 \value{
 A \code{J} (number of outcome variables) by \code{J} (number of outcome variables) by \code{K} (number of latent class) array of latent class-specific variance-covariance matrices.

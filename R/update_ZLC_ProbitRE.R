@@ -1,6 +1,7 @@
 #' @title Update latent normal draws in a probit model.
 #'
 #' @description The latent normal draws for a probit model with or without a subject specific random effects are updated.
+#' @export
 #' @return An observation-level vector of latent normal draws.
 update_ZLC_ProbitRE <- function(C, phi, tau, D, UObs, URe, subjectID){
 

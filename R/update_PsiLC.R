@@ -1,7 +1,7 @@
 #' @title Update variance-covariance matrix \code{Psi} of the random effects for \code{Y1,\dots,YJ}.
 #'
 #' @description An inverse-Wishart prior distribution is used to update the variance-covariance matrix \code{Psi} of the random effects for each outcome variable. If only a random intercept is present, then the prior collapses to an inverse gamma distribution.
-#'
+#' @export
 #' @return A \code{J}-element list. Each element is latent class-specific variance-covariance matrix stored in a \code{q} by \code{q} by \code{K} array. For example, \code{Psi = list(Psi1 = array( , dim = c(q, q, K)), Psi2 = array( , dim = c(q, q, K)))}. If \code{q=1}, a scalar for the variance of the random intercept replaces the variance-covariance matrix.
 update_PsiLC <- function(C, betaSub, bSub, Y, XSub, prior.scale, prior.df) {
 

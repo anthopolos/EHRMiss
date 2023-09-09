@@ -4,8 +4,7 @@
 \alias{update_betaLC_ProbitRE}
 \title{Update latent class-specific regression coefficients in a probit model.}
 \usage{
-update_betaLC_ProbitRE(C, Z, tau, UObs, URe, prior.mu, prior.Sigma,
-  subjectID)
+update_betaLC_ProbitRE(C, Z, tau, UObs, URe, prior.mu, prior.Sigma, subjectID)
 }
 \value{
 A matrix of latent class-specific regression coefficients in which columns index the \code{K} latent classes.

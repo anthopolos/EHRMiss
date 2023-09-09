@@ -1,6 +1,7 @@
 #' @title Get the likelihood after integrating out latent class membership and the random effects.
 #'
 #' @description The likelihood after integrating out latent class membership and random effects is used in the calculation of DIC3. The DIC3 is the modified DIC proposed for the latent variable setting. The reference for the DIC3 is in Celeux, G., Forbes, F., Robert, C. P., & Titterington, D. M. (2006). Deviance Information Criteria for Missing Data Models. Bayesian Analysis, 1(4), 651-674. This likelihood is also used the calculation of BIC1 and BIC2. When \code{modelVisit = TRUE} or \code{modelResponse = TRUE}, numerical integration is used to estimate the marginal likelihoods. An option to estimate these densities using a Monte Carlo approach is available, but the option is turned off \code{monteCarlo = FALSE} because of long computation time.
+#' @export
 #' @return Observed data likelihood contribution of each of \code{n} subjects at the current iteration.
 get_observed_lik_sub <- function(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe, XObs, XSub, subjectIDY, phi, Omega, D, URe, UObs, subjectID, lambda, Theta, M, VRe, VObs, subjectIDM, Mvec, modelVisit, modelResponse, monteCarlo = FALSE) {
 
@@ -8,27 +9,17 @@ get_observed_lik_sub <- function(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe,
   n <- length(unique(subjectIDY))
   K <- dim(priorPik)[2]
   q <- ncol(as.matrix(XRe))
+  s <- ncol(as.matrix(XObs))
+  p <- ncol(as.matrix(XSub))
 
   ### Longitudinal model for Y
-
-  # Random effects design matrix
-  sp_XRe_sub <- lapply(split(as.data.frame(XRe), subjectIDY, drop = TRUE), as.matrix)
-  convert_XRe_sub <- as.matrix(Matrix::bdiag(sp_XRe_sub))
-
   # Use a K loop for the likelihood contribution by latent class
-
   # Storage for likelihood contribution of each subject to each class
   llik_y_pik <- matrix(NA, nrow = n, ncol = K)
 
   for (k in 1:K) {
 
-    ### Compute the marginal mean in each latent class
-    muk <- matrix(NA, nrow = length(subjectIDY), ncol = J)
-
-    for (j in 1:J) {
-      # Marginal mean for longitudinal outcome j in class k
-      muk[ , j] <- XObs %*% betaObs[[j]][ , k] + convert_XRe_sub %*% c(t(XSub %*% betaSub[[j]][ , , k]))
-    }
+    Sigmak <- Sigma[ , , k]
 
     ### Get each subject's observed data likelihood contribution, i.e., after integrating out the random effects
     # The variance-covariance matrix for subject i will be a J x ni \times J x ni matrix
@@ -36,23 +27,30 @@ get_observed_lik_sub <- function(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe,
 
     llik_y_pikTemp <- sapply(unique(subjectIDY), function(x) {
 
-      # Number of measurements for subject x
-      ni <- length(which(subjectIDY == x))
+      selObs <- which(subjectIDY == x)
+
+      ni <- length(selObs)
       # Y measurements
-      Yi <- matrix(Y[which(subjectIDY == x), ], ncol = J, nrow = ni)
+      Yi <- matrix(Y[selObs, ], ncol = J, nrow = ni)
       # Random effects design matrix
-      XRei <- matrix(XRe[which(subjectIDY == x), ], ncol = q, nrow = ni)
+      XRei <- matrix(XRe[selObs, ], ncol = q, nrow = ni)
+      # Observation level design matrix
+      XObsi <- matrix(XObs[selObs, ], ncol = s, nrow = ni)
+      # Expand subject level matrix
+      XSubi <- matrix(rep(XSub[x, ], ni), ncol = p, nrow = ni, byrow = TRUE)
 
-      muki <- matrix(muk[which(subjectIDY == x), ], ncol = J, nrow = ni)
+      # Storage for muki
+      muki <- matrix(NA, ncol = J, nrow = ni)
+
       Rki <- as.list(1:J)
-      Sigmak <- Sigma[ , , k]
-
       for (j in 1:J) {
 
         # Transform this to save by class then outcome
         Psikj <- Psi[[j]][ , , k]
 
         Rki[[j]] <- (XRei %*% Psikj %*% t(XRei)) + diag(Sigmak[j, j], nrow = ni, ncol = ni)
+        #! Will need to consider what to do if more than 1 subject level covariate wrt interaction with random effects
+        muki[ , j] <- XObsi %*% betaObs[[j]][ , k] + XSubi %*% betaSub[[j]][ , , k]
 
       }
 
@@ -64,10 +62,8 @@ get_observed_lik_sub <- function(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe,
         for (l in (j + 1):J) {
 
           sigmajl <- matrix(rep(Sigmak[j, l], ni*ni), nrow = ni, ncol = ni)
-
           selRow <- ((j - 1)*ni + 1):(j*ni)
           selCol <- ((l - 1)*ni + 1):(l*ni)
-
           Rki[selRow, selCol] <- Rki[selCol, selRow] <- sigmajl
 
         }
@@ -247,6 +243,11 @@ get_observed_lik_sub <- function(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe,
 
     # n-length vector of likelihood contributions of each subject
     store_llikTemp <- apply(priorPik * llik_y_pik * llik_d_pik * llik_m_pik, 1, sum)
+
+  } else if (modelVisit == TRUE & modelResponse == FALSE) {
+
+    # n-length vector of likelihood contributions of each subject
+    store_llikTemp <- apply(priorPik * llik_y_pik * llik_d_pik, 1, sum)
 
   } else if (modelVisit == FALSE & modelResponse == FALSE) {
 

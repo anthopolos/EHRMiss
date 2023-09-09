@@ -1,6 +1,7 @@
 #' @title Update latent class-specific regression coefficients in a probit model.
 #'
 #' @description Latent class-specific regression coefficients are updated based on a Bernoulli likelihood and probit link function. A normal prior distribution is assumed. The updating function can accomodate probit models that include a subject specific random effects.
+#' @export
 #' @return A matrix of latent class-specific regression coefficients in which columns index the \code{K} latent classes.
 update_betaLC_ProbitRE <- function(C, Z, tau, UObs, URe, prior.mu, prior.Sigma, subjectID){
 

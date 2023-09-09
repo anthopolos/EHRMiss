@@ -4,7 +4,7 @@
 #'
 #' @param K A scalar for the assumed number of latent classes in the GMMs.
 #' @param J A scalar for the number of longitudinal outcomes. \code{J} must be greater than 1.
-#' @param data A data.frame with all analysis variables. The data.frame must include variables named \code{Y1,\dots,YJ} for the longitudinal health outcomes; \code{D} for the visit process; \code{M1,\dots,MJ} for the response process for each health outcome given a clinic visit; and an integer-valued variable for the patient ID of each longitudinal measurement called \code{subjectID}.
+#' @param data A data.frame with all analysis variables. The data.frame must include variables named \code{Y1,\dots,YJ} for the longitudinal health outcomes; \code{D} for the visit process; \code{M1,\dots,MJ} for the response process for each health outcome given a clinic visit; and a consecutive, integer-valued variable for the patient ID of each longitudinal measurement called \code{subjectID}. Note that the data.frame must contain only the \code{Y1,\dots,YJ} and \code{M1,\dots,MJ} to be used in model fitting.
 #' @param regf A list of formulas for the design matrices in each sub-model. The structure is detailed below:
 #'
 #' To improve Gibbs sampling properties, the multivariate model for \code{Y1,\dots,YJ} is updated based on a hierarchically-centered parameterisation. As such, the named formulas for the longitudinal health outcomes model are "YRe", which is the random effects design matrix that must include at least a column of 1's for a random intercept; "YObs", which is the observation-level fixed effects design matrix containing covariates that will not be associated with random effects; and, "YSub" which contains the formula for the random effects equations using subject-level covariates. Note that the formulas "YRe", "YObs", and "YSub" must be disjoint in the hierarchically-centered parameterisation.
@@ -27,7 +27,8 @@
 #' @param burn Number of MCMC samples to discard as a burn-in.
 #' @param monitor Logical. If \code{TRUE}, then after the burn-in period finishes, trace plots of the first four regression coefficients associated with \code{regf} formula named "YSub" are displayed and are periodically updated according to the \code{update} parameter.
 #' @param update A scalar for the interval at which to print the iteration number and running size of the latent classes. If monitor is TRUE, then trace plots will also be updated at this interval.
-#' @param modelComparison Logical. If \code{TRUE}, then model information criteria are returned, including the BIC and DIC3. In addition the log pseudo-marginal likelihood (LPML) statistic is computed. Model comparison is allowed only under \code{imputeResponse} is \code{TRUE}. See the \code{Details} section.
+#' @param modelComparison Logical. If \code{TRUE}, then model information criteria are returned, including the BIC and DIC3. In addition the log pseudo-marginal likelihood (LPML) statistic is computed. Model comparison is allowed only under \code{imputeResponse} is \code{TRUE}. Note that under an MNAR visit process or response process process given a clinic visit, these model comparison statistics may not have the desired interpretation. See Daniels and Hogan's Missing Data in Longitudinal Studies (2008).
+#' @param lastIterations A scalar for the number of last iterations for which to carry out model comparison (if modelComparison equals \code{TRUE}), model checking, and write out draws of imputed longitudinal outcomes \code{Y1,\dots,YJ}, latent class membership \code{C}, and random effects \code{b} from the longitudinal outcomes submodel. If \code{NULL}, then this will be equal to \code{n.samples - burn}. This option was included because these additional computations can markedly increase model fitting time.
 #' @param sims Logical. If \code{TRUE}, then the average class membership probabilities are returned with MCMC samples, and components of an applied analysis are not executed including model comparison, posterior predictive draws of the longitudinal health outcomes, posterior predictive checking, and written text files of imputations of the longitudinal health outcomes.
 #'
 #' @details Details are given on the specification of \code{priors} and \code{inits} and on the model comparison analysis.
@@ -94,22 +95,25 @@
 #' \item \code{store_class_weight}: Latent class membership probabilities averaged from the subject-level to the latent class-level. If \code{sims = FALSE}, these will not be returned.
 #' }
 #'
-#' If \code{sims = FALSE}, then after burn-in, samples for draws from the posterior predictive distribution, the discrepancy measure for posterior predictive checking, and imputations for the missing longitudinal health outcomes are written to separate comma-separated text files in the working directory.
+#' If \code{sims = FALSE}, then after burn-in, samples for draws from the posterior predictive distribution, the discrepancy measure for posterior predictive checking, and imputations for the missing longitudinal health outcomes are written to separate comma-separated text files in the working directory. In addition, text files are printed for saved draws of the random effects from the longitudinal outcomes submodel \code{store_bSub.txt} and the discrete latent class membership variable \code{store_C.txt}. Saved random effects can be used for re-constructing patient-specific curves. Saved latent class membership draws may be useful for assessing the key conditional independence assumption.
 #'
-#'Draws from the posterior predictive distribution are stored in \code{store_Ydraw.txt}. These are samples of the replicated completed longitudinal health outcomes. See Gelman, A., Mechelen, I. V., Verbeke, G., Heitjan, D.F. and Meulders, M. (2005) Multiple Imputation for Model Checking: Completed-Data Plots with Missing and Latent Data. Biometrics, 61, 74-85. This file is of dimension \code{n.samples - burn} by \code{N}, where \code{N} is the number of observations given a clinic visit (i.e., \code{length(Y)}).
+#'Draws from the posterior predictive distribution are stored in \code{store_Ydraw.txt}. These are samples of the replicated completed longitudinal health outcomes. See Gelman, A., Mechelen, I. V., Verbeke, G., Heitjan, D.F. and Meulders, M. (2005) Multiple Imputation for Model Checking: Completed-Data Plots with Missing and Latent Data. Biometrics, 61, 74-85. This file is of dimension \code{n.samples - burn} by \code{N}, where \code{N} is the number of observations given a clinic visit (i.e., \code{length(Y)}). In addition posterior predictive draws of the visit process \code{D}, and the response process given a clinic visit \code{M1,\dots,MJ} are stored in \code{store_Ddraw.txt} and \code{store_Mdraw.txt}. Under MNAR, these posterior predictive draws can be used for model checking based on the observed and replicated observed data. See the following references: 1. Xu, Dandan, Arkendu Chatterjee, and Michael Daniels. "A note on posterior predictive checks to assess model fit for incomplete data." Statistics in medicine 35.27 (2016): 5029-5039.; and 2. Daniels, Michael J., Arkendu S. Chatterjee, and Chenguang Wang. "Bayesian model selection for incomplete data using the posterior predictive distribution." Biometrics 68.4 (2012): 1055-1063.
 #'
 #'Samples of a measure of discrepancy are stored in \code{store_T_completed.txt}. This file is of dimension \code{n.samples - burn} by \code{2}, where the first column is the discrepancy measure computed using the completed data, and the second column is the discrepancy measure using the replicated completed data. The discrepancy measure is the multivariate mean square error. See \code{?get_discrepancy_plot}.
 #'
-#' Samples of the imputations for \code{Y1,\dots,YJ} are written to \code{store_miss_Y1.txt,\dots,\code{store_miss_YJ.txt}}. If a longitudinal health outcome has no missing values, no file is generated.
+#' Samples of the imputations for \code{Y1,\dots,YJ} are written to \code{store_miss_Y1.txt,\dots,\code{store_miss_YJ.txt}}. If a longitudinal health outcome has no missing values, no file is generated. Note that imputations will not be generated for patient-time windows during which none of the longitudinal outcomes \code{Y1,\dots,YJ} are observed.
 #'
 #' @examples
 #'
 #'
-#' ------------------------------- Load data from the EHRMiss package
+#' #------------------------------- Load data from the EHRMiss package
 #' data(growth)
 #' names(growth)
 #' dim(growth)
-
+#'
+#' ### Construct consecutive integer valued subjectID
+#' growth$subjectID <- seq(1, length(unique(growth$subjectID)), by = 1)[factor(growth$subjectID)]
+#'
 #' #------------------------------ Model details
 #' ### Number of outcomes
 #' J <- 2
@@ -117,7 +121,7 @@
 #' K <- 2
 
 #' #------------------------------- Specify the formulas for the design matrices and put the
-#' formulas in regf
+#' #formulas in regf
 #' regf <- list(LatentClass = ~ 1 + birthweight,
 #'             YRe = ~ 1,
 #'             YObs = ~ -1 + time,
@@ -138,32 +142,29 @@
 #' q <- length(all.vars(regf[["YRe"]])) + 1
 #'
 #' ### Prior distributions
-#' priors <- list(list(rep(0, m), diag(1, m)), list #'(rep(0, s), diag(100, s)),
+#' priors <- list(list(rep(0, m), diag(1, m)), list(rep(0, s), diag(100, s)),
 #'               list(rep(0, p), diag(10000, p)),
 #'               list(1, 1),
-#'               list(diag(c(0.5, 0.6), J), (J + 2 #')),
+#'               list(diag(c(0.5, 0.6), J), (J + 2)),
 #'               list(rep(0, f), diag(100, f)),
 #'               list(1, 1),
 #'               list(rep(0, e), diag(100, e)),
 #'               list(scale = 1, df = 1))
 #'
 #' ### Initial values
-#' inits <- list(matrix(rep(0, m * (K - 1)), nrow = m #', ncol = (K - 1)),
-#'              list(matrix(rnorm(s*K), ncol = K,   #' nrow = s), matrix(rnorm(s*K), ncol = K,
-#'               nrow = s #')),
-#'              list(array(rnorm(p*q*K), dim = c(p, #'q, K)), array(rnorm(p*q*K), dim = c(p, q, K
-#'              ))),
-#'              list(array(rep(0.4, K), dim = c(q, q
-#'                , K)), array(rep(0.4, K), dim = c
-#'                (q, q, K))),
-#'              array(c(1, 0, 0, 1, 0.5, 0, 0, 0.5), #'dim = c(J, J, K)),
-#'              matrix(rnorm(f*K), ncol = K),
-#'              array(rep(0.5, K), dim = c(q, q, K
-#'              )),
-#'              list(matrix(rnorm(e*K), ncol = K)),
-#'              list(array(rep(0.5, K), dim = c(q, q
-#'              , K))))
-#'
+#' inits <- list(matrix(rep(0, m * (K - 1)), nrow = m, ncol = (K - 1)),
+#'              list(matrix(rnorm(s * K), nrow = s, ncol = K),
+#'              matrix(rnorm(s * K), nrow = s, ncol = K)),
+#'              list(array(rnorm(p * q * K), dim = c(p, q, K)),
+#'              array(rnorm(p * q * K), dim = c(p, q, K))),
+#'              list(array(rep(0.4, K), dim = c(q, q, K)),
+#'              array(rep(0.4, K), dim = c(q, q, K))),
+#'              array(c(1, 0, 0, 1, 0.5, 0, 0, 0.5), dim = c(J, J, K)),
+#'              matrix(rnorm(f * K), nrow = f, ncol = K),
+#'              array(rep(0.5, K), dim = c(q, q, K)),
+#'              list(matrix(rnorm(e * K), ncol = K)),
+#'              list(array(rep(0.5, K), dim = c(q, q, K))))
+
 #' #-------------------------- Fit model with MNAR visit process, MNAR response process for Y2
 #'
 #' n.samples <- 100
@@ -178,12 +179,12 @@
 #'  regf = regf, imputeResponse = TRUE,
 #' Mvec = 2, modelVisit = TRUE, modelResponse = TRUE, priors =  priors, inits = inits,
 #' n.samples = n.samples, burn = burn, monitor = monitor, update = update,
-#' modelComparison = TRUE, sims = FALSE)
+#' modelComparison = TRUE, lastIterations = 10, sims = FALSE)
 #' ### Get Bayesian posterior predictive p-value, see ?get_discrepancy_plot
 #' # Set working directory to where discrepancy samples are written
 #' store_T_completed <- read.table("store_T_completed.txt", header = FALSE, sep = ",")
 #' get_discrepancy_plot(store_T_completed)
-MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, modelResponse, priors, inits, n.samples, burn, monitor, update, modelComparison, sims = FALSE) {
+MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, modelResponse, priors, inits, n.samples, burn, monitor, update, modelComparison, lastIterations, sims = FALSE) {
 
 
   ### Imputations are conducted only for Y | D = 1 & M = 0
@@ -219,11 +220,31 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
     data <- subset(data, subset = D == 1)
     cat("Number of obs. after restricting to observed visits:", dim(data)[1], "\n")
 
+    # Identify columns with outcome Y
+    y_col_index <- grepl("^Y[1-9]$", colnames(data), perl = TRUE)
+
+    #! Change on 1/22
+    ### Restrict to observed visits with at least 1 Y_{jit} observed
+    #data$exc <- sapply(1:nrow(data), function(x) {
+    #  exc <- 1 * (sum(is.na(data[x , paste("Y", 1:J, sep = "")])) == J)
+    #  return(exc)
+    #}
+    #)
+
+    data$exc <- sapply(1:nrow(data), function(x) {
+      exc <- 1 * (sum(is.na(data[x , y_col_index])) == J)
+      return(exc)
+    }
+    )
+    data <- subset(data, exc == 0)
+
     # Subject ID for Y is NVisit by 1
     subjectIDY <- data$subjectID
 
     # Multivariate Y, NVisit by J
-    Y <- data.matrix(data[ , paste("Y", 1:J, sep = "")])
+    #! Change on Jan 24, 2023
+    #Y <- data.matrix(data[ , paste("Y", 1:J, sep = "")])
+    Y <- data.matrix(data[ , y_col_index])
 
     # Random effects design matrix for Y, includes at least intercept
     XRe <- model.matrix(regf[["YRe"]], data = data)
@@ -239,7 +260,12 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
     # Response indicator generated for each Y_j
     # M is NVisit x J with 0 as missing and 1 as observed
     #Response variables in the data must have names indexing Y (e.g., if Y2 is missing in response, then name of M is M2)
-    M <- data.matrix(data[ , paste("M", 1:J, sep = "")])
+    #! Change on Jan 24, 2023
+    #M <- data.matrix(data[ , paste("M", 1:J, sep = "")])
+
+    # Identify columns with response measurement M
+    m_col_index <- grepl("^M[1-9]$", colnames(data), perl = TRUE)
+    M <- data.matrix(data[ , m_col_index])
 
     ### Modeling components if we are modeling the response processes given D = 1
     if (modelResponse == TRUE) {
@@ -272,8 +298,11 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
 
     # M is N x J indicator matrix
     # M[ , j] = 1 if observed; 0 if missing given D = 1; and NA if D = 0
-    M <- data.matrix(data[ , paste("M", 1:J, sep = "")])
-    #Jstar <- ncol(M)
+    #! Change on Jan 24, 2023
+    #M <- data.matrix(data[ , paste("M", 1:J, sep = "")])
+    # Identify columns with response measurement M
+    m_col_index <- grepl("^M[1-9]$", colnames(data), perl = TRUE)
+    M <- data.matrix(data[ , m_col_index])
 
     # Logical: TRUE if observed responses on all Y_j for subject i
     allObs <- apply(M, 1, function(x) sum(x, na.rm = TRUE) == J)
@@ -283,12 +312,18 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
     data <- subset(data, allObs == TRUE)
     cat("Number of obs. after restricting to complete pairs:", dim(data)[1], "\n")
 
+
     ### Modeling components for model Y | M = 1 (implies D = 1)
     # Subject ID for Y is NCompletePairs by 1
-    subjectIDY <- data$subjectID
+    # Re-number so subscript is not out of bounds
+    subjectIDY <- seq(1, length(unique(data$subjectID)), by = 1)[factor(data$subjectID)]
 
     # Multivariate Y, NCompletePairs by J
-    Y <- data.matrix(data[ , paste("Y", 1:J, sep = "")])
+    #! Change on Jan 24, 2023
+    #Y <- data.matrix(data[ , paste("Y", 1:J, sep = "")])
+    # Identify columns with outcome Y
+    y_col_index <- grepl("^Y[1-9]$", colnames(data), perl = TRUE)
+    Y <- data.matrix(data[ , y_col_index])
 
     # Random effects design matrix for Y, includes at least intercept
     XRe <- model.matrix(regf[["YRe"]], data = data)
@@ -386,10 +421,22 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
   ### Initialize C based on number of subjects in X above
   delta <- inits[[1]]
   C <- sample(1:K, size = n, prob = rep(1/K, K), replace = TRUE)
+  #! Change on 4/19/2022
   if (K > 2) {
-    Z <- mnormt::rmnorm(n, varcov = diag(K - 1)) + W %*% delta
-  } else {
-    Z <- mnormt::rmnorm(n, varcov = 1) + W %*% delta
+    #Z <- mnormt::rmnorm(n, varcov = diag(K - 1)) + W %*% delta
+    # K-1 by K-1 covariance matrix
+    VarCovP <- matrix(1, nrow = (K - 1), ncol = (K - 1))
+    diag(VarCovP) <- 2
+    err <- do.call("rbind", sapply(1:n, function(x) {res <- mnormt::rmnorm(1, mean = rep(0, (K-1)), varcov = VarCovP)
+    return(res) }, simplify = FALSE))
+
+    Z <- err + W %*% delta
+
+  } else if (K == 2) {
+    #Z <- mnormt::rmnorm(n, varcov = 1) + W %*% delta
+    err <- mnormt::rmnorm(n, varcov = diag(K - 1))
+    Z <- err + W %*% delta
+
   }
 
   ### Longitudinal multivariate Y
@@ -476,6 +523,17 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
   }
 
   #---------------------------------------------------------- Storage of MCMC samples
+
+  ### Relevant to model comparison
+  #! Changed 3/17/2023 to new.burn to accomodate saving only a lastIterations of samples
+  if (!is.null(lastIterations)) {
+    new.burn <- n.samples - lastIterations
+  } else if (is.null(lastIterations)) {
+    new.burn <- burn
+  }
+
+
+
   ### Multinomial class membership model
   store_delta <- matrix(NA, nrow = (n.samples - burn), ncol = ((K - 1)*m), dimnames = list(paste("Iteration", (burn + 1):n.samples, sep = "_"), paste(rep(paste("Class", rep(2:K), sep = ""), each = length(colnames(W))), colnames(W), sep = "_")))
 
@@ -509,13 +567,13 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
   }
 
   ### Model comparison based on information criteria storage
-  #Computed whenever imputeResponse == TRUE
+  #! Changed 3/17/2023 to new.burn to accomodate saving only a lastIterations of samples
   if (sims == FALSE & imputeResponse == TRUE & modelComparison == TRUE) {
 
     #Effective sample size
-    store_ESS <- rep(NA, n.samples - burn - 1)
-    store_observed_lik_sub <- matrix(NA, nrow = (n.samples - burn - 1), ncol = n)
-    store_observed_llik <- rep(NA, n.samples - burn - 1)
+    store_ESS <- rep(NA, n.samples - new.burn - 1)
+    store_observed_lik_sub <- matrix(NA, nrow = (n.samples - new.burn - 1), ncol = n)
+    store_observed_llik <- rep(NA, n.samples - new.burn - 1)
   }
 
   ### For data simulation statistics
@@ -630,40 +688,54 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
 
     if (sims == FALSE) {
 
-      if (i > (burn + 1)) {
+      #! Changed 3/17/2023 to new.burn to accomodate saving only a lastIterations of samples
+      if (i > (new.burn + 1)) {
 
         # Model comparison
         if (imputeResponse == TRUE & modelComparison == TRUE) {
 
           # Effective sample size
-          store_ESS[i - burn - 1] <- get_ESS(priorPik = priorPik, Psi = Psi, Sigma = Sigma, Y = Y, XRe = XRe, subjectIDY = subjectIDY)
+          store_ESS[i - new.burn - 1] <- get_ESS(priorPik = priorPik, Psi = Psi, Sigma = Sigma, Y = Y, XRe = XRe, subjectIDY = subjectIDY)
 
           ### Observed data log likelihood for BIC calculation
           #store_observed_lik_sub: n.samples-burn \times n storage
-          store_observed_lik_sub[i - burn - 1, ] <- get_observed_lik_sub(priorPik = priorPik, betaObs = betaObs, betaSub = betaSub, Sigma = Sigma, Psi = Psi, Y = Y, XRe = XRe, XObs = XObs, XSub = XSub, subjectIDY = subjectIDY, phi = phi, Omega = Omega, D = D, URe = URe, UObs = UObs, subjectID = subjectID, lambda = lambda, Theta = Theta, M = M, VRe = VRe, VObs = VObs, subjectIDM = subjectIDM, Mvec = Mvec, modelVisit = modelVisit, modelResponse = modelResponse, monteCarlo = FALSE)
+          store_observed_lik_sub[i - new.burn - 1, ] <- get_observed_lik_sub(priorPik = priorPik, betaObs = betaObs, betaSub = betaSub, Sigma = Sigma, Psi = Psi, Y = Y, XRe = XRe, XObs = XObs, XSub = XSub, subjectIDY = subjectIDY, phi = phi, Omega = Omega, D = D, URe = URe, UObs = UObs, subjectID = subjectID, lambda = lambda, Theta = Theta, M = M, VRe = VRe, VObs = VObs, subjectIDM = subjectIDM, Mvec = Mvec, modelVisit = modelVisit, modelResponse = modelResponse, monteCarlo = FALSE)
           #write.table(t(c(store_observed_lik_sub[i - burn - 1, ])), file = "store_observed_lik_sub.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
 
           #store_observed_llik: n.samples-burn length storage
-          store_observed_llik[i - burn - 1] <- sum(log(store_observed_lik_sub[i - burn - 1, ]))
+          store_observed_llik[i - new.burn - 1] <- sum(log(store_observed_lik_sub[i - new.burn - 1, ]))
           #write.table(store_observed_llik[i - burn - 1], file = "store_observed_llik.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
 
         } # End of model comparison computations
 
         ### Discrepancy measure using completed datasets per Gelman et al. 2005
-        # discrepancy completed is based on computing T^rep using replicated completed data (Y_obs, Y_mis) and comparing to T^c calculated using the completed data Y_obs, Y_mis. This hold for the MNAR MNAR, MNAR MAR, and MAR MAR analyses. For MCAR analysis, this will simply be replicates of the observed data Y | D = 1, M = 1.
+        ### Replicates of Y, D, M to allow posterior predictive checks based on replicated observed data per Xu et al. 2016
+        # discrepancy completed is based on computing T^rep using replicated completed data (C, b, Y_obs, Y_mis) and comparing to T^obs calculated using the completed data Y_obs, Y_mis. This hold for the MNAR MNAR, MNAR MAR, and MAR MAR analyses. For MCAR analysis, this will simply be replicates of the observed data Y | D = 1, M = 1.
         #Calculation for T_{obs} is based on current iteration of C so this step must come before redrawing C
-        #Calculation for T_{rep} is based on redrawing C using priorPik, and then redrawing Y
-        discrepancy_completed <- get_discrepancy_completed(K = K, C = C, priorPik = priorPik, bSub = bSub, betaObs = betaObs, Sigma = Sigma, Y = Y, XRe = XRe, XObs = XObs, subjectIDY = subjectIDY)
-        # Summary discrepancy measures based on replicated completed data
-        write.table(t(c(discrepancy_completed[["store_T_completed"]])), file = "store_T_completed.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+        #Calculation for T_{rep} is based on redrawing C using priorPik, redrawing b, and then redrawing Y
+        model_checks <- get_model_checks(K = K, C = C, priorPik = priorPik, bSub = bSub, betaObs = betaObs, betaSub = betaSub, Psi = Psi, Sigma = Sigma, Y = Y, XRe = XRe, XObs = XObs, XSub = XSub, subjectIDY = subjectIDY, Q = Q, phi = phi, Omega = Omega, D = D, URe = URe, UObs = UObs, subjectID = subjectID, L = L, lambda = lambda, Theta = Theta, M = M, VRe = VRe, VObs = VObs, subjectIDM = subjectIDM, Mvec = Mvec, modelVisit = modelVisit, modelResponse = modelResponse)
 
-      } # End of i > burn
+        # Summary discrepancy measures based on replicated completed data
+        write.table(t(c(model_checks[["store_T_completed"]])), file = "store_T_completed.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+
+        write.table(t(c(model_checks[["store_Ydraw"]])), file = "store_Ydraw.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+
+        if (modelVisit == TRUE) {
+          write.table(t(c(model_checks[["store_Ddraw"]])), file = "store_Ddraw.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+        }
+
+        if (modelResponse == TRUE) {
+          write.table(t(c(model_checks[["store_Mdraw"]])), file = "store_Mdraw.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+        }
+
+
+      } # End of i > new.burn
 
     } # End of sims
 
 
     ### Update latent class membership
-    postClass <- update_C_fast(K = K, Z = Z, C = C, betaObs = betaObs, bSub = bSub, betaSub = betaSub, Sigma = Sigma, Psi = Psi, phi = phi, tau = tau, Omega = Omega, lambda = lambda, kappa = kappa, Theta = Theta,  Y = Y, XRe = XRe, XObs = XObs, XSub = XSub, D = D, UObs = UObs, URe = URe, M = M, Mvec = Mvec, VObs = VObs, VRe = VRe, subjectIDY = subjectIDY, subjectID = subjectID, subjectIDM = subjectIDM, modelVisit = modelVisit, modelResponse = modelResponse)
+    postClass <- update_C_fast(priorPik = priorPik, betaObs = betaObs, bSub = bSub, betaSub = betaSub, Sigma = Sigma, Psi = Psi, phi = phi, tau = tau, Omega = Omega, lambda = lambda, kappa = kappa, Theta = Theta,  Y = Y, XRe = XRe, XObs = XObs, XSub = XSub, D = D, UObs = UObs, URe = URe, M = M, Mvec = Mvec, VObs = VObs, VRe = VRe, subjectIDY = subjectIDY, subjectID = subjectID, subjectIDM = subjectIDM, modelVisit = modelVisit, modelResponse = modelResponse)
 
     C <- postClass[["C"]]
     pik <- postClass[["pik"]]
@@ -722,13 +794,23 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
       }
 
 
-      ### Data analysis post analysis
-      # For posterior predictive distribution. If imputing Y, then this is the complete data replication. If complete pairs analysis, this is simply Y_{obs}.
-      if (sims == FALSE) {
+      if (monitor == TRUE & (i - burn) %% update == 0) {
+        par(mfrow = c(2, 2))
+        # Monitor selected parameters
+        plot(store_betaSub[1:(i - burn), 1], type = "l")
+        plot(store_betaSub[1:(i - burn), 2], type = "l")
+        plot(store_betaSub[1:(i - burn), 3], type = "l")
+        plot(store_betaSub[1:(i - burn), 4], type = "l")
+      }
 
-        # Posterior predictive draws
-        Ydraw <- get_post_pred(J = J, priorPik = priorPik, bSub = bSub, betaObs = betaObs, Sigma = Sigma, XRe = XRe, XObs = XObs, subjectIDY = subjectIDY)
-        write.table(t(c(Ydraw)), file = "store_Ydraw.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+    }
+
+
+    ### Changed as of 3/17/2023
+    if (i > new.burn) {
+
+      ### Data analysis post analysis
+      if (sims == FALSE) {
 
         if (imputeResponse == TRUE) {
 
@@ -741,21 +823,22 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
             }
           }
         }
+
+        #### Save draws of C for posterior predictive checks post-estimation
+        write.table(t(c(C)), file = "store_C.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+
+        ### Save draws of random effects for posterior predictive checks post-estimation
+        write.table(t(c(unlist(bSub))), file = "store_bSub.txt", sep = ",", row.names = FALSE, col.names = FALSE, append = TRUE)
+
+
       }
 
 
-      if (monitor == TRUE & (i - burn) %% update == 0) {
-        par(mfrow = c(2, 2))
-        # Monitor selected parameters
-        plot(store_betaSub[1:(i - burn), 1], type = "l")
-        plot(store_betaSub[1:(i - burn), 2], type = "l")
-        plot(store_betaSub[1:(i - burn), 3], type = "l")
-        plot(store_betaSub[1:(i - burn), 4], type = "l")
-      }
 
-    }
+    } # End of i > new.burn
 
-  }
+
+  } # End MCMC iteration loop
 
 
   ### Register total time
@@ -805,85 +888,16 @@ MVNYBinaryMiss <- function(K, J, data, regf, imputeResponse, Mvec, modelVisit, m
         dK <- dK + (K * e) + K * (q * (q + 1) / 2)
       }
 
-      # Plug in posterior mean estimates to compute the log likelihood after integrating out the random effects and latent class
-      pm_priorPik <- matrix(c(apply(S[["store_priorPi"]], 2, mean)), nrow = n, ncol = K, byrow = FALSE)
-
-      pm_betaObs <- as.list(1:J)
-      for (j in 1:J) {
-        pm_betaObs[[j]] <- matrix(apply(S[["store_betaObs"]][ , grep(paste("Y", j, sep = ""), colnames(S[["store_betaObs"]]))], 2, mean), nrow = s, ncol = K)
-      }
-
-      # May need to confirm code works for p > 1 or q > 1
-      pm_betaSub <- as.list(1:J)
-      for (j in 1:J) {
-        pm_betaSub[[j]] <- array(apply(S[["store_betaSub"]][ , grep(paste("Y", j, sep = ""), colnames(S[["store_betaSub"]]))], 2, mean), dim = c(p, q, K))
-      }
-
-      pm_Sigma <- array(apply(S[["store_Sigma"]], 2, mean), dim = c(J, J, K))
-
-      pm_Psi <- as.list(1:J)
-      for (j in 1:J) {
-        pm_Psi[[j]] <- array(apply(S[["store_Psi"]][ , grep(paste("Y", j, sep = ""), colnames(S[["store_Psi"]]))], 2, mean), dim = c(q, q, K))
-      }
-
-      if (modelVisit == TRUE) {
-
-        pm_phi <- matrix(apply(S[["store_phi"]], 2, mean), nrow = f, ncol = K)
-        pm_Omega <- array(apply(S[["store_Omega"]], 2, mean), dim = c(q, q, K))
-
-      } else if (modelVisit == FALSE)  {
-
-        pm_phi <- NULL
-        pm_Omega <- NULL
-
-      }
-
-      if (modelResponse == TRUE) {
-
-        pm_lambda <- as.list(1:Jstar)
-        for (j in 1:Jstar) {
-          pm_lambda[[j]] <- matrix(apply(S[["store_lambda"]][ , grep(paste("M", Mvec[j], sep = ""), colnames(S[["store_lambda"]]))], 2, mean), nrow = e, ncol = K)
-        }
-
-        pm_Theta <- as.list(1:Jstar)
-        for (j in 1:Jstar) {
-          pm_Theta[[j]] <- array(apply(S[["store_Theta"]][ , grep(paste("M", Mvec[j], sep = ""), colnames(S[["store_Theta"]]))], 2, mean), dim = c(q, q, K))
-        }
-
-      } else if (modelResponse == FALSE)  {
-
-        pm_lambda <- NULL
-        pm_Theta <- NULL
-
-      }
-
-      # Plug in for missing Y, use posterior mean of Ymis for each j
-      if (imputeResponse == TRUE) {
-
-        # Note that Y will have the last value of mis before replacement with the posterior mean
-        pm_Ycomplete <- Y
-
-        for (j in 1:J) {
-
-          if (any(M[ , j] == 0)) {
-            fileName <- paste(paste("store", "miss", paste("Y", j, sep = ""), sep = "_"), ".txt", sep = "")
-            store_miss_Yj <- read.table(fileName, sep = ",")
-            pm_Ycomplete[M[ , j] == 0, j] <- apply(store_miss_Yj, 2, mean)
-          }
-        }
-      }
-
       #Average ESS
       ESS_bar <- mean(store_ESS)
 
-      #Log likleihood after integrating out random effects evaluated at posterior means
-      pm_llik <- sum(log(get_observed_lik_sub(priorPik = pm_priorPik, betaObs = pm_betaObs, betaSub = pm_betaSub, Sigma = pm_Sigma, Psi = pm_Psi, Y = pm_Ycomplete, XRe = XRe, XObs = XObs, XSub = XSub, subjectIDY = subjectIDY, phi = pm_phi, Omega = pm_Omega, D = D, URe = URe, UObs = UObs, subjectID = subjectID, lambda = pm_lambda, Theta = pm_Theta, M = M, VRe = VRe, VObs = VObs, subjectIDM = subjectIDM, Mvec = Mvec, modelVisit = modelVisit, modelResponse = modelResponse, monteCarlo = FALSE)))
+      ### BIC 1 is calculated using the log likelihood after integrating out the random effects and length of subjectIDY
+      # Approximate the maximum likelihood estimator by taking the parameter values that maximize the log of the observed data likelihood over MCMC samples. This is per Fruhwirth-Schnatter, S., & Pyne, S. (2010). Bayesian Inference for Finite Mixtures of Univariate and Multivariate Skew-Normal and Skew-t Distributions. Biostatistics, 11(2), 317-336. https://doi.org/10.1093/biostatistics/kxp062
+      # Following SAS (Jones 2011) use the number of subjects as the sample size
+      BIC_1 <- -2 * max(store_observed_llik) + dK * log(length(unique(subjectIDY)))
 
-      ### BIC 1 is calculated using the log likelihood after integrating out the random effects evaluated at the posterior means and length of subjectIDY
-      BIC_1 <- -2 * pm_llik + dK * log(length(subjectIDY))
-
-      ### BIC 2 is calculated using the log likelihood after integrating out the random effects evaluated at the posterior means and using the effective sample size
-      BIC_2 <- -2 * pm_llik + dK * log(ESS_bar)
+      ### BIC 2 is calculated using the log likelihood after integrating out the random effects and using the effective sample size
+      BIC_2 <- -2 * max(store_observed_llik) + dK * log(ESS_bar)
 
       ### Add calculations for conditional predictive ordinate (see Gelfand and Dey 1994) and log pseudo marginal likleihood
       # n-length vector of CPOs

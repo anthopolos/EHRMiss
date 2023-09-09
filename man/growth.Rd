@@ -4,7 +4,8 @@
 \name{growth}
 \alias{growth}
 \title{Bivariate longitudinal health outcomes \code{Y1} and \code{Y2}.}
-\format{A data frame with 173 subjects followed over 9 time windows. Twenty-seven subjects fell out of the dataset due to having no follow-up clinic visits.
+\format{
+A data frame with 173 subjects followed over 9 time windows. Twenty-seven subjects fell out of the dataset due to having no follow-up clinic visits.
 
 \describe{
 \item{subjectID}{Subject identifier for each measurement}
@@ -18,7 +19,8 @@
 \item{M1}{Binary indicator for the response process for \code{Y1}, equal to 1 if a response is observed given a clinic visit, and 0 otherwise. \code{M1} always equals 1 when \code{D=1}. \code{M1} is \code{NA} when \code{D = 0}.}
 \item{M2}{Binary indicator for the response process for \code{Y2}, equal to 1 if a response is observed given a clinic visit, and 0 otherwise. \code{M2} is \code{NA} when \code{D = 0}.}
 \item{Class}{A categorical variable equal to 1 or 2 to indicate each subject's latent class membership.}
-}}
+}
+}
 \usage{
 growth
 }

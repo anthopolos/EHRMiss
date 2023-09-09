@@ -4,9 +4,36 @@
 \alias{update_C_fast}
 \title{Update posterior latent class assignment \code{C} for each subject.}
 \usage{
-update_C_fast(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau, Omega,
-  lambda, kappa, Theta, Y, XRe, XObs, XSub, D, UObs, URe, M, Mvec, VObs,
-  VRe, subjectIDY, subjectID, subjectIDM, modelVisit, modelResponse)
+update_C_fast(
+  priorPik,
+  betaObs,
+  bSub,
+  betaSub,
+  Sigma,
+  Psi,
+  phi,
+  tau,
+  Omega,
+  lambda,
+  kappa,
+  Theta,
+  Y,
+  XRe,
+  XObs,
+  XSub,
+  D,
+  UObs,
+  URe,
+  M,
+  Mvec,
+  VObs,
+  VRe,
+  subjectIDY,
+  subjectID,
+  subjectIDM,
+  modelVisit,
+  modelResponse
+)
 }
 \value{
 A list of 2 elements. An \code{n} by 1 vector of latent class assignments called \code{C}. An \code{n} by \code{K} matrix of posterior probabilities of latent class assignment.

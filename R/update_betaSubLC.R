@@ -1,7 +1,7 @@
 #' @title Update latent class specific regression coefficients \code{betaSub}.
 #'
 #' @description An multivariate normal prior distribution is used to update the regression coefficients \code{betaSub} corresponding to the covariates in \code{XSub},  for each outcome \code{Y1,\dots,YJ}.
-#'
+#' @export
 #' @return A \code{J} element list in which each element is a a \code{p} (number of covariates) by \code{q} (number of random effects) by \code{K} (number of latent classes) array of latent class-specific regression coefficients associated with \code{XSub}.
 update_betaSubLC <- function(C, bSub, Psi, Y, XSub, prior.mu, prior.Sigma) {
 

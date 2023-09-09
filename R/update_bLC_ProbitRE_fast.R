@@ -1,6 +1,7 @@
 #' @title Update random effects conditional on latent class membership in a probit model.
 #'
 #' @description The random effects in a probit model are updated conditional on class membership. A normal prior distribution is assumed.
+#' @export
 #' @return A stacked \code{n}\code{q} by 1 vector of random effects for each subject.
 update_bLC_ProbitRE_fast <- function(C, Omega, Z, phi, UObs, URe, subjectID) {
 

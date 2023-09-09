@@ -4,8 +4,24 @@
 \alias{simdat}
 \title{Simulate data for \code{MVNYBinaryMiss}.}
 \usage{
-simdat(K, J, data, regf, delta, betaObs, betaSub, Psi, Sigma, phi, Omega,
-  responseMiss, lambda, Theta, Mvec, full)
+simdat(
+  K,
+  J,
+  data,
+  regf,
+  delta,
+  betaObs,
+  betaSub,
+  Psi,
+  Sigma,
+  phi,
+  Omega,
+  responseMiss,
+  lambda,
+  Theta,
+  Mvec,
+  full
+)
 }
 \arguments{
 \item{K}{A scalar for the assumed number of latent classes in the GMMs.}

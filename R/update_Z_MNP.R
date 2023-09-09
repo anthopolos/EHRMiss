@@ -1,6 +1,7 @@
 #' @title Update latent variable \code{Z} in multinomial probit model.
 #'
 #' @description This uses a truncated normal distribution to update latent variable Z. This updating function must be used with \code{K} greater than 2.
+#' @export
 #' @return An \code{n} by \code{K - 1} matrix of latent variable \code{Z}.
 update_Z_MNP <- function(Z, C, delta, W){
 
