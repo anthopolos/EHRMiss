@@ -1,51 +1,15 @@
 #' @title Update posterior latent class assignment \code{C} for each subject.
 #'
 #' @description This uses Bayes' theorem to update posterior latent class assignment. This is a ratio of the likelihood contribution of each subject to class \code{k} and the prior probability of belonging in class \code{k} to the likelihood contribution marginalized over latent classes. The function accomodates the case of \code{K} equal to 2 or greater than 2.
+#' @export
 #' @return A list of 2 elements. An \code{n} by 1 vector of latent class assignments called \code{C}. An \code{n} by \code{K} matrix of posterior probabilities of latent class assignment.
-update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau, Omega, lambda, kappa, Theta,  Y, XRe, XObs, XSub, D, UObs, URe, M, Mvec, VObs, VRe, subjectIDY, subjectID, subjectIDM, modelVisit, modelResponse){
+update_C_fast <- function(priorPik, betaObs, bSub, betaSub, Sigma, Psi, phi, tau, Omega, lambda, kappa, Theta,  Y, XRe, XObs, XSub, D, UObs, URe, M, Mvec, VObs, VRe, subjectIDY, subjectID, subjectIDM, modelVisit, modelResponse){
+
+  ### Number of latent classes
+  K <- ncol(as.matrix(priorPik))
 
   ### Number of subjects
-  n <- length(C)
-
-  ### Prior probability of class assignment
-  priorPikReorder <- matrix(NA, nrow = n, ncol = K)
-
-  if (K == 2) {
-    # K = 2:
-
-    priorPikReorder[ , K] <- pnorm(Z)
-    priorPikReorder[ , 1] <- 1 - priorPikReorder[ , K]
-
-  } else {
-
-    # K > 2:
-
-    # Construct original matrix R from Z based parameterization
-    #We have been working with the differenced parameterization such that the coefficients represent a difference from baseline class K, where after a simple reparameterization, class K is switched to class 0 (the reference group moves from the Kth column to the first column)
-    #If we assume the original parameterization is represented by R, then
-    #Z_{i1} = R_{i1} - R_{iK}; Z_{i2} = R_{i2} - R_{iK}, and so forth
-    #R_{iK} \sim N(0, 1) since \delta_K and \theta_K are fixed to 0
-    #R is an n x K matrix, where the K^th column is that with \delta_k fixed to 0 (the K^th column is the reference column)
-    R <- matrix(NA, nrow = n, ncol = K)
-    R[ , K] <- rnorm(n, mean = 0, sd = 1)
-    for (k in 1:(K - 1)) {
-      R[ , k] <- Z[, k] + R[ , K]
-    }
-
-    # Covariance matrix
-    VarCovP <- matrix(1, nrow = (K - 1), ncol = (K - 1))
-    diag(VarCovP) <- 2
-
-    # Values where distribution is evaluated
-    vals <- matrix(0, nrow = n, ncol = (K - 1))
-    for (k in 1:K) {
-      mur_diffk <- R[ , -k] - R[ , k]
-      priorPikReorder[ , k] <- mnormt::pmnorm(vals, mean = mur_diffk, varcov = VarCovP)
-    }
-
-    priorPikReorder <- as.matrix(unname(priorPikReorder))
-
-  }
+  n <- length(unique(subjectIDY))
 
   ### Construct likelihood contribution for subject i to each class k
   J <- ncol(Y)
@@ -76,6 +40,9 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
   }
 
 
+  #! Changed on April 26, 2022
+  bSubm <- lapply(bSub, function(x) matrix(x, nrow = n, ncol = q, byrow = TRUE))
+
   for (k in 1:K) {
 
     # Storage that changes by latent class
@@ -92,11 +59,16 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
     for (j in 1:J) {
 
       # Random effects contribution to observation level
-      bSubjm <- matrix(bSub[[j]], nrow = n, ncol = q, byrow = TRUE)
+      #bSubjm <- matrix(bSub[[j]], nrow = n, ncol = q, byrow = TRUE)
+      bSubjm <- bSubm[[j]]
       bSubjCont <- unlist(sapply(unique(subjectIDY), function(x) {
         selObs <- which(subjectIDY == x)
         XReObs <- as.matrix(XRe)[selObs, ]
-        values <- as.matrix(XReObs) %*% c(t(as.matrix(bSubjm[which(unique(subjectIDY) == x), ])))
+
+        #! Changed on April 26, 2022
+        #values <- as.matrix(XReObs) %*% c(t(as.matrix(bSubjm[which(unique(subjectIDY) == x), ])))
+
+        values <- as.matrix(XReObs) %*% c(t(as.matrix(bSubjm[x, ])))
         return(values)
       }))
 
@@ -116,10 +88,16 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
     # f(b_{1i}, b_{2i} | C_i, \Psi_1, \Psi_2) = f(b_{1i} | C_i, betaSub_1, \Psi_1) f(b_{2i}| C, betaSub_2, \Psi_2)
     for (j in 1:J) {
       # Subject level equation
-      bSubm <- matrix(bSub[[j]], nrow = n, ncol = q, byrow = TRUE)
+      #bSubm <- matrix(bSub[[j]], nrow = n, ncol = q, byrow = TRUE)
+
+      bSubjm <- bSubm[[j]]
       muSub <- XSub %*% betaSub[[j]][ , , k]
-      likSub[ , j] <- sapply(1:nrow(bSubm), function(x) {
-        mvtnorm::dmvnorm(bSubm[x, ], mean = muSub[x, ], sigma = as.matrix(Psi[[j]][ , , k]), log = FALSE)
+      #likSub[ , j] <- sapply(1:nrow(bSubm), function(x) {
+      #  mvtnorm::dmvnorm(bSubm[x, ], mean = muSub[x, ], sigma = as.matrix(Psi[[j]][ , , k]), log = FALSE)
+      likSub[ , j] <- sapply(1:nrow(bSubjm), function(x) {
+          mvtnorm::dmvnorm(bSubjm[x, ], mean = muSub[x, ], sigma = as.matrix(Psi[[j]][ , , k]), log = FALSE)
+
+
       })
     }
 
@@ -139,7 +117,8 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
       tauCont <- sapply(unique(subjectID), function(x) {
         selObs <- which(subjectID == x)
         UReObs <- as.matrix(URe)[selObs, ]
-        values <- as.matrix(UReObs) %*% c(t(as.matrix(taum[which(unique(subjectID) == x), ])))
+        #values <- as.matrix(UReObs) %*% c(t(as.matrix(taum[which(unique(subjectID) == x), ])))
+        values <- as.matrix(UReObs) %*% c(t(as.matrix(taum[x, ])))
         return(values)
       })
 
@@ -177,7 +156,8 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
         kappajCont <- unlist(sapply(unique(subjectIDM), function(x) {
           selObs <- which(subjectIDM == x)
           VReObs <- as.matrix(VRe)[selObs, ]
-          values <- as.matrix(VReObs) %*% c(t(as.matrix(kappajm[which(unique(subjectIDM) == x), ])))
+          #values <- as.matrix(VReObs) %*% c(t(as.matrix(kappajm[which(unique(subjectIDM) == x), ])))
+          values <- as.matrix(VReObs) %*% c(t(as.matrix(kappajm[x, ])))
           return(values)
         }))
 
@@ -206,68 +186,24 @@ update_C_fast <- function(K, Z, C, betaObs, bSub, betaSub, Sigma, Psi, phi, tau,
 
   }
 
-  # Reordering is necessary K > 2 but not for K = 2
-  if (K > 2) {
-    # Reorder latent classes to be on original parameterization
-    #Because the McCulloch and Rossi parameterization effectively switches latent class K to class 0, and because the prior pik are computed on the original un-differenced scale, we need to make sure that priorPik and llik_y_pik are consistently ordered.
-    #In llik_y, the the reference group in first column is returned to the last column to be consistent with the original parameterization
-    likYReorder <- cbind(likY[, 2:K], likY[, 1])
 
-    if (modelVisit == TRUE & modelResponse == TRUE) {
+  # Numerator
+  # priorPik has class K from undifferenced parameterization in position 1 so re-ordering here is unnecessary
 
-      likDReorder <- cbind(likD[, 2:K], likD[, 1])
-      likMReorder <- cbind(likM[, 2:K], likM[, 1])
-
-      pik_num <- priorPikReorder * likYReorder * likDReorder * likMReorder
-
-    } else if (modelVisit == TRUE & modelResponse == FALSE) {
-
-      likDReorder <- cbind(likD[, 2:K], likD[, 1])
-
-      pik_num <- priorPikReorder * likYReorder * likDReorder
-
-    } else if (modelVisit == FALSE & modelResponse == FALSE) {
-
-      pik_num <- priorPikReorder * likYReorder
-
-    }
-
-    # Posterior probability of subject i belonging in each class
-    pikReorder <- t(apply(pik_num, 1, function(x) x / sum(x)))
-
-    # Draw C from multinomial, first returning pik to the formulation in McCulloch and Rossi that is the basis for latent normal bounds updating. This means that column K moves to column 1 to be the reference class. Reordering pik will funnel through to C.
-    pik <- cbind(pikReorder[ , K], pikReorder[ , 1:(K - 1)])
-
-    # Replace NA's with 1/K
-    sel <- apply(pik, 1, function(x) sum(is.na(x)))
-    pik[sel > 0, ] <- rep(rep(1 / K, times = K), times = sum(sel > 0))
-
-  } else if (K == 2) {
-
-    # K = 2
-    # No reordering is necessary
-
-    priorPik <- priorPikReorder
-
-    if (modelVisit == TRUE & modelResponse == TRUE) {
-      # Numerator
-      pik_num <- priorPik * likY * likD * likM
-
-    } else if (modelVisit == TRUE & modelResponse == FALSE) {
-      # Numerator
-      pik_num <- priorPik * likY * likD
-
-    } else if (modelVisit == FALSE & modelResponse == FALSE) {
-
-      pik_num <- priorPik * likY
-    }
-
-    # Posterior probability of subject i belonging in each class
-    pik <- t(apply(pik_num, 1, function(x) x / sum(x)))
-    sel <- apply(pik, 1, function(x) sum(is.na(x)))
-    pik[sel > 0, ] <- rep(rep(1 / K, times = K), times = sum(sel > 0))
-
+  if (modelVisit == TRUE & modelResponse == TRUE) {
+    pik_num <- priorPik * likY * likD * likM
+  } else if (modelVisit == TRUE & modelResponse == FALSE) {
+    pik_num <- priorPik * likY * likD
+  } else if (modelVisit == FALSE & modelResponse == FALSE) {
+    pik_num <- priorPik * likY
   }
+
+  # Posterior probability of subject i belonging in each class
+  pik <- t(apply(pik_num, 1, function(x) x / sum(x)))
+
+  # Replace NA's with 1/K
+  sel <- apply(pik, 1, function(x) sum(is.na(x)))
+  pik[sel > 0, ] <- rep(rep(1 / K, times = K), times = sum(sel > 0))
 
   pik <- as.matrix(unname(pik))
   C <- Hmisc::rMultinom(pik, 1)

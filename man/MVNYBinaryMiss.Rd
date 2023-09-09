@@ -4,16 +4,32 @@
 \alias{MVNYBinaryMiss}
 \title{Bayesian shared parameter model for missing data in EHRs.}
 \usage{
-MVNYBinaryMiss(K, J, data, regf, imputeResponse, Mvec, modelVisit,
-  modelResponse, priors, inits, n.samples, burn, monitor, update,
-  modelComparison, sims = FALSE)
+MVNYBinaryMiss(
+  K,
+  J,
+  data,
+  regf,
+  imputeResponse,
+  Mvec,
+  modelVisit,
+  modelResponse,
+  priors,
+  inits,
+  n.samples,
+  burn,
+  monitor,
+  update,
+  modelComparison,
+  lastIterations,
+  sims = FALSE
+)
 }
 \arguments{
 \item{K}{A scalar for the assumed number of latent classes in the GMMs.}
 
 \item{J}{A scalar for the number of longitudinal outcomes. \code{J} must be greater than 1.}
 
-\item{data}{A data.frame with all analysis variables. The data.frame must include variables named \code{Y1,\dots,YJ} for the longitudinal health outcomes; \code{D} for the visit process; \code{M1,\dots,MJ} for the response process for each health outcome given a clinic visit; and an integer-valued variable for the patient ID of each longitudinal measurement called \code{subjectID}.}
+\item{data}{A data.frame with all analysis variables. The data.frame must include variables named \code{Y1,\dots,YJ} for the longitudinal health outcomes; \code{D} for the visit process; \code{M1,\dots,MJ} for the response process for each health outcome given a clinic visit; and a consecutive, integer-valued variable for the patient ID of each longitudinal measurement called \code{subjectID}. Note that the data.frame must contain only the \code{Y1,\dots,YJ} and \code{M1,\dots,MJ} to be used in model fitting.}
 
 \item{regf}{A list of formulas for the design matrices in each sub-model. The structure is detailed below:
 
@@ -47,7 +63,9 @@ Note that \code{Y1,\dots,YJ} are assumed to have the same design matrices, and t
 
 \item{update}{A scalar for the interval at which to print the iteration number and running size of the latent classes. If monitor is TRUE, then trace plots will also be updated at this interval.}
 
-\item{modelComparison}{Logical. If \code{TRUE}, then model information criteria are returned, including the BIC and DIC3. In addition the log pseudo-marginal likelihood (LPML) statistic is computed. Model comparison is allowed only under \code{imputeResponse} is \code{TRUE}. See the \code{Details} section.}
+\item{modelComparison}{Logical. If \code{TRUE}, then model information criteria are returned, including the BIC and DIC3. In addition the log pseudo-marginal likelihood (LPML) statistic is computed. Model comparison is allowed only under \code{imputeResponse} is \code{TRUE}. Note that under an MNAR visit process or response process process given a clinic visit, these model comparison statistics may not have the desired interpretation. See Daniels and Hogan's Missing Data in Longitudinal Studies (2008).}
+
+\item{lastIterations}{A scalar for the number of last iterations for which to carry out model comparison (if modelComparison equals \code{TRUE}), model checking, and write out draws of imputed longitudinal outcomes \code{Y1,\dots,YJ}, latent class membership \code{C}, and random effects \code{b} from the longitudinal outcomes submodel. If \code{NULL}, then this will be equal to \code{n.samples - burn}. This option was included because these additional computations can markedly increase model fitting time.}
 
 \item{sims}{Logical. If \code{TRUE}, then the average class membership probabilities are returned with MCMC samples, and components of an applied analysis are not executed including model comparison, posterior predictive draws of the longitudinal health outcomes, posterior predictive checking, and written text files of imputations of the longitudinal health outcomes.}
 }
@@ -70,13 +88,13 @@ A list of matrices of stored MCMC samples (\code{n.samples-burn}) for unknown pa
 \item \code{store_class_weight}: Latent class membership probabilities averaged from the subject-level to the latent class-level. If \code{sims = FALSE}, these will not be returned.
 }
 
-If \code{sims = FALSE}, then after burn-in, samples for draws from the posterior predictive distribution, the discrepancy measure for posterior predictive checking, and imputations for the missing longitudinal health outcomes are written to separate comma-separated text files in the working directory.
+If \code{sims = FALSE}, then after burn-in, samples for draws from the posterior predictive distribution, the discrepancy measure for posterior predictive checking, and imputations for the missing longitudinal health outcomes are written to separate comma-separated text files in the working directory. In addition, text files are printed for saved draws of the random effects from the longitudinal outcomes submodel \code{store_bSub.txt} and the discrete latent class membership variable \code{store_C.txt}. Saved random effects can be used for re-constructing patient-specific curves. Saved latent class membership draws may be useful for assessing the key conditional independence assumption.
 
-Draws from the posterior predictive distribution are stored in \code{store_Ydraw.txt}. These are samples of the replicated completed longitudinal health outcomes. See Gelman, A., Mechelen, I. V., Verbeke, G., Heitjan, D.F. and Meulders, M. (2005) Multiple Imputation for Model Checking: Completed-Data Plots with Missing and Latent Data. Biometrics, 61, 74-85. This file is of dimension \code{n.samples - burn} by \code{N}, where \code{N} is the number of observations given a clinic visit (i.e., \code{length(Y)}).
+Draws from the posterior predictive distribution are stored in \code{store_Ydraw.txt}. These are samples of the replicated completed longitudinal health outcomes. See Gelman, A., Mechelen, I. V., Verbeke, G., Heitjan, D.F. and Meulders, M. (2005) Multiple Imputation for Model Checking: Completed-Data Plots with Missing and Latent Data. Biometrics, 61, 74-85. This file is of dimension \code{n.samples - burn} by \code{N}, where \code{N} is the number of observations given a clinic visit (i.e., \code{length(Y)}). In addition posterior predictive draws of the visit process \code{D}, and the response process given a clinic visit \code{M1,\dots,MJ} are stored in \code{store_Ddraw.txt} and \code{store_Mdraw.txt}. Under MNAR, these posterior predictive draws can be used for model checking based on the observed and replicated observed data. See the following references: 1. Xu, Dandan, Arkendu Chatterjee, and Michael Daniels. "A note on posterior predictive checks to assess model fit for incomplete data." Statistics in medicine 35.27 (2016): 5029-5039.; and 2. Daniels, Michael J., Arkendu S. Chatterjee, and Chenguang Wang. "Bayesian model selection for incomplete data using the posterior predictive distribution." Biometrics 68.4 (2012): 1055-1063.
 
 Samples of a measure of discrepancy are stored in \code{store_T_completed.txt}. This file is of dimension \code{n.samples - burn} by \code{2}, where the first column is the discrepancy measure computed using the completed data, and the second column is the discrepancy measure using the replicated completed data. The discrepancy measure is the multivariate mean square error. See \code{?get_discrepancy_plot}.
 
-Samples of the imputations for \code{Y1,\dots,YJ} are written to \code{store_miss_Y1.txt,\dots,\code{store_miss_YJ.txt}}. If a longitudinal health outcome has no missing values, no file is generated.
+Samples of the imputations for \code{Y1,\dots,YJ} are written to \code{store_miss_Y1.txt,\dots,\code{store_miss_YJ.txt}}. If a longitudinal health outcome has no missing values, no file is generated. Note that imputations will not be generated for patient-time windows during which none of the longitudinal outcomes \code{Y1,\dots,YJ} are observed.
 }
 \description{
 The model is a Bayesian shared parameter model to handle missing data in \code{J} longitudinal health outcomes collected in electronic health records (EHRs). The sub-models for the longitudinal health outcomes, visit process, and response process given a clinic visit are growth mixture models (GMMs). Longitudinal health outcomes \code{Y1,\dots,YJ} are assumed to follow a multivariate normal distribution. The visit process \code{D} is defined as a binary indicator equal to 1 if patient has a clinic visit and 0 otherwise. To correspond to \code{Y1,\dots,YJ}, \code{M1,\dots,MJ} are binary indicators equal to 1 if a response is observed given a clinic visit and 0 otherwise. The visit process and response process given a visit are modeled using a probit link function. A multinomial probit model is used to model the probability of a subject belonging to a latent class. Conditional on a patient's latent class membership \code{C}, the longitudinal health outcomes, visit process, and response process given a clinic visit are assumed to be independent.
@@ -130,17 +148,21 @@ An example of the completed list object for specification of the prior distribut
 \examples{
 
 
-------------------------------- Load data from the EHRMiss package
+#------------------------------- Load data from the EHRMiss package
 data(growth)
 names(growth)
 dim(growth)
+
+### Construct consecutive integer valued subjectID
+growth$subjectID <- seq(1, length(unique(growth$subjectID)), by = 1)[factor(growth$subjectID)]
+
 #------------------------------ Model details
 ### Number of outcomes
 J <- 2
 ### Number of latent classes
 K <- 2
 #------------------------------- Specify the formulas for the design matrices and put the
-formulas in regf
+#formulas in regf
 regf <- list(LatentClass = ~ 1 + birthweight,
             YRe = ~ 1,
             YObs = ~ -1 + time,
@@ -161,32 +183,28 @@ e <- length(all.vars(regf[["MObs"]])) + 1
 q <- length(all.vars(regf[["YRe"]])) + 1
 
 ### Prior distributions
-priors <- list(list(rep(0, m), diag(1, m)), list #'(rep(0, s), diag(100, s)),
+priors <- list(list(rep(0, m), diag(1, m)), list(rep(0, s), diag(100, s)),
               list(rep(0, p), diag(10000, p)),
               list(1, 1),
-              list(diag(c(0.5, 0.6), J), (J + 2 #')),
+              list(diag(c(0.5, 0.6), J), (J + 2)),
               list(rep(0, f), diag(100, f)),
               list(1, 1),
               list(rep(0, e), diag(100, e)),
               list(scale = 1, df = 1))
 
 ### Initial values
-inits <- list(matrix(rep(0, m * (K - 1)), nrow = m #', ncol = (K - 1)),
-             list(matrix(rnorm(s*K), ncol = K,   #' nrow = s), matrix(rnorm(s*K), ncol = K,
-              nrow = s #')),
-             list(array(rnorm(p*q*K), dim = c(p, #'q, K)), array(rnorm(p*q*K), dim = c(p, q, K
-             ))),
-             list(array(rep(0.4, K), dim = c(q, q
-               , K)), array(rep(0.4, K), dim = c
-               (q, q, K))),
-             array(c(1, 0, 0, 1, 0.5, 0, 0, 0.5), #'dim = c(J, J, K)),
-             matrix(rnorm(f*K), ncol = K),
-             array(rep(0.5, K), dim = c(q, q, K
-             )),
-             list(matrix(rnorm(e*K), ncol = K)),
-             list(array(rep(0.5, K), dim = c(q, q
-             , K))))
-
+inits <- list(matrix(rep(0, m * (K - 1)), nrow = m, ncol = (K - 1)),
+             list(matrix(rnorm(s * K), nrow = s, ncol = K),
+             matrix(rnorm(s * K), nrow = s, ncol = K)),
+             list(array(rnorm(p * q * K), dim = c(p, q, K)),
+             array(rnorm(p * q * K), dim = c(p, q, K))),
+             list(array(rep(0.4, K), dim = c(q, q, K)),
+             array(rep(0.4, K), dim = c(q, q, K))),
+             array(c(1, 0, 0, 1, 0.5, 0, 0, 0.5), dim = c(J, J, K)),
+             matrix(rnorm(f * K), nrow = f, ncol = K),
+             array(rep(0.5, K), dim = c(q, q, K)),
+             list(matrix(rnorm(e * K), ncol = K)),
+             list(array(rep(0.5, K), dim = c(q, q, K))))
 #-------------------------- Fit model with MNAR visit process, MNAR response process for Y2
 
 n.samples <- 100
@@ -201,7 +219,7 @@ res <- MVNYBinaryMiss(K = K, J = J, data = growth,
  regf = regf, imputeResponse = TRUE,
 Mvec = 2, modelVisit = TRUE, modelResponse = TRUE, priors =  priors, inits = inits,
 n.samples = n.samples, burn = burn, monitor = monitor, update = update,
-modelComparison = TRUE, sims = FALSE)
+modelComparison = TRUE, lastIterations = 10, sims = FALSE)
 ### Get Bayesian posterior predictive p-value, see ?get_discrepancy_plot
 # Set working directory to where discrepancy samples are written
 store_T_completed <- read.table("store_T_completed.txt", header = FALSE, sep = ",")

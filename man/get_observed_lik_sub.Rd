@@ -4,10 +4,34 @@
 \alias{get_observed_lik_sub}
 \title{Get the likelihood after integrating out latent class membership and the random effects.}
 \usage{
-get_observed_lik_sub(priorPik, betaObs, betaSub, Sigma, Psi, Y, XRe, XObs,
-  XSub, subjectIDY, phi, Omega, D, URe, UObs, subjectID, lambda, Theta, M,
-  VRe, VObs, subjectIDM, Mvec, modelVisit, modelResponse,
-  monteCarlo = FALSE)
+get_observed_lik_sub(
+  priorPik,
+  betaObs,
+  betaSub,
+  Sigma,
+  Psi,
+  Y,
+  XRe,
+  XObs,
+  XSub,
+  subjectIDY,
+  phi,
+  Omega,
+  D,
+  URe,
+  UObs,
+  subjectID,
+  lambda,
+  Theta,
+  M,
+  VRe,
+  VObs,
+  subjectIDM,
+  Mvec,
+  modelVisit,
+  modelResponse,
+  monteCarlo = FALSE
+)
 }
 \value{
 Observed data likelihood contribution of each of \code{n} subjects at the current iteration.

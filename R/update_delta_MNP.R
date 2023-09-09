@@ -1,5 +1,6 @@
 #' @title Update regression coefficients \code{delta} in multinomial probit model.
 #' @description This uses a multivariate normal prior distribution to update the latent class-specific regression coefficients in the multinomial probit model.
+#' @export
 #' @return An \code{m} by \code{K-1} matrix of latent class-specific regression coefficients in the multinomial probit model with \code{K=1} fixed to zero.
 update_delta_MNP <- function(Z, delta, W, prior.mu, prior.Sigma){
 

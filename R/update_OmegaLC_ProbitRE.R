@@ -1,6 +1,7 @@
 #' @title Update the latent class-specific variance-covariance matrices of the subject-level random effects in a probit model.
 #'
 #' @description The variance-covariance matrices of the random effects are updated conditional on class membership using an inverse-Wishart prior distribution. This updating function is based on a probit model (Bernoulli likelihood) and a multivariate normal distribution for the random effects.
+#' @export
 #' @return A \code{q} by \code{q} by \code{K} array of variance-covariance matrices for the random effects, where \code{q} is the number of random effects.
 update_OmegaLC_ProbitRE <- function(C, tau, prior.scale, prior.df) {
 

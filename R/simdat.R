@@ -45,7 +45,16 @@ simdat <- function(K, J, data, regf, delta, betaObs, betaSub, Psi, Sigma, phi, O
     # Generate latent variable Z where covariance matrix is fixed for identifiability
     if (K > 2) {
 
-      Z <- mnormt::rmnorm(n, varcov = diag(K - 1)) + W %*% delta
+      # K-1 by K-1 covariance matrix
+      VarCovP <- matrix(1, nrow = (K - 1), ncol = (K - 1))
+      diag(VarCovP) <- 2
+
+      # Errors for each z_i1,..,z_{iK-1}
+      err <- do.call("rbind", sapply(1:n, function(x) {res <- mnormt::rmnorm(1, mean = rep(0, (K-1)), varcov = VarCovP)
+      return(res) }, simplify = FALSE))
+
+      Z <- err + W %*% delta
+
       # Categorical variable based on max value of Z
       C <- rep(NA, n)
       for (i in 1:n) {
@@ -62,53 +71,27 @@ simdat <- function(K, J, data, regf, delta, betaObs, betaSub, Psi, Sigma, phi, O
       C <- C + 1
 
       # Get prior probabilities of class assignment
-      #Construct original matrix R from Z based parameterization
-      #We have been working with the differenced parameterization such that the coefficients represent a difference from baseline class K, where after a simple reparameterization, class K is switched to class 0 (the reference group moves from the Kth column to the first column)
-      #If we assume the original parameterization is represented by R, then
-      #Z_{i1} = R_{i1} - R_{iK}; Z_{i2} = R_{i2} - R_{iK}, and so forth
-      #R_{iK} \sim N(0, 1) since \delta_K and \theta_K are fixed to 0
-      #R is an n x K matrix, where the K^th column is that with \delta_k fixed to 0 (the K^th column is the reference column)
-
-      priorPikReorder <- matrix(NA, nrow = n, ncol = K)
-
-      R <- matrix(NA, nrow = n, ncol = K)
-      R[ , K] <- rnorm(n, mean = 0, sd = 1)
-
-      for (k in 1:(K - 1)) {
-        R[ , k] <- Z[, k] + R[ , K]
-      }
-
-      # Covariance matrix
-      VarCovP <- matrix(1, nrow = (K - 1), ncol = (K - 1))
-      diag(VarCovP) <- 2
-
-      # Values where distribution is evaluated
-      vals <- matrix(0, nrow = n, ncol = (K - 1))
-      for (k in 1:K) {
-        mur_diffk <- R[ , -k] - R[ , k]
-        priorPikReorder[ , k] <- mnormt::pmnorm(vals, mean = mur_diffk, varcov = VarCovP)
-      }
-
-      priorPikReorder <- as.matrix(unname(priorPikReorder))
-      priorPik <- cbind(priorPikReorder[ , K], priorPikReorder[ , 1:(K - 1)])
+      priorPik <- update_priorPik(Z = Z)
 
     } else if (K == 2) {
 
       # delta is an m x 1 vector of regression coefficients
-      Z <- mnormt::rmnorm(n, varcov = 1) + W %*% delta
+      Z <- mnormt::rmnorm(n, varcov = diag(K - 1)) + W %*% delta
       C <- ifelse(Z > 0, 1, 0)
       C <- C + 1
 
       ### Get prior class membership probabilities
       priorPik <- matrix(NA, nrow = n, ncol = K)
-      priorPik[ , K] <- pnorm(Z)
-      priorPik[ , K - 1] <- 1 - pnorm(Z)
+      priorPik[ , K] <- pnorm(Z, mean = 0, sd = 1)
+      priorPik[ , 1] <- 1 - priorPik[ , K]
+
 
     }
 
     list(C = C, priorPik = priorPik)
 
   }
+
 
   lc_res <- lc(K = K, delta = delta, W = W)
   C <- lc_res$C

@@ -1,6 +1,7 @@
 #' @title Get the effective sample size for the BIC calculation.
 #'
 #' @description This calculation of the effective sample size is used in BIC2. The reference for the approach is in Jones, R. H. (2011). Bayesian information criterion for longitudinal and clustered data. Statistics in Medicine, 30(25), 3050-3056. I extended the approach to the setting of multiple longitudinal health outcomes.
+#' @export
 #' @return Effective sample size at the current iteration.
 get_ESS <- function(priorPik, Psi, Sigma, Y, XRe, subjectIDY) {
 

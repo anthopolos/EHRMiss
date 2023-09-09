@@ -1,6 +1,7 @@
 #' @title Update subject level random effects \code{bSub}.
 #'
 #' @description A hierarchically-centered approach is used to update the random effects for each of \code{Y1,\dots,YJ}.
+#' @export
 #' @return A \code{J}-element list for each of \code{Y1,\dots,YJ}, with each element containing a vector of stacked subject level random effects, updated conditional on latent class membership.
 update_bSubLC_fast <- function(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XObs, XSub, subjectID) {
 
@@ -20,6 +21,8 @@ update_bSubLC_fast <- function(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XO
   q <- ncol(XRe)
 
   C_expand <- C[factor(subjectID)]
+
+  bSubm <- lapply(bSub, function(x) matrix(x, nrow = n, ncol = q, byrow = TRUE))
 
   values <- as.list(1:J)
 
@@ -54,21 +57,40 @@ update_bSubLC_fast <- function(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XO
       # Posterior mean calculation pieces
       # Contribution from not j
       betaObsNotj <- matrix(unlist(lapply(betaObs[-j], function(x){as.matrix(x)[ , k]})), ncol = J - 1, byrow = FALSE)
-      bSubNotj <- matrix(unlist(lapply(bSub[-j], function(x) {
+
+      #! Changed on April 26, 2022
+      #bSubNotj <- matrix(unlist(lapply(bSub[-j], function(x) {
+      #
+        # Calculate contribution from bNotj subsetted to latent class k
+      # tempm <- matrix(x, nrow = n, ncol = q, byrow = TRUE)
+      # reContj <- unlist(sapply(unique(subjectIDk), function(u) {
+      #   selObs <- which(subjectIDk == u)
+      #   XRekObs <- as.matrix(XRek)[selObs, ]
+      #   tempmk <- as.matrix(tempm[which(unique(subjectID) == u), ])
+      #   mu <- as.matrix(XRekObs) %*% c(t(tempmk))
+      #   return(mu)
+      # }))
+      #
+      #}
+      #
+      #)), ncol = J - 1)
+
+      bSubNotj <- matrix(unlist(lapply(bSubm[-j], function(x) {
 
         # Calculate contribution from bNotj subsetted to latent class k
-        tempm <- matrix(x, nrow = n, ncol = q, byrow = TRUE)
         reContj <- unlist(sapply(unique(subjectIDk), function(u) {
           selObs <- which(subjectIDk == u)
           XRekObs <- as.matrix(XRek)[selObs, ]
-          tempmk <- as.matrix(tempm[which(unique(subjectID) == u), ])
-          mu <- as.matrix(XRekObs) %*% c(t(tempmk))
+
+          xk <- as.matrix(x[u, ])
+          mu <- as.matrix(XRekObs) %*% c(t(xk))
           return(mu)
         }))
 
       }
 
       )), ncol = J - 1)
+
       #! Use of matrix(, ncol = J-1) has an implicit c(reContj) before placing in matrix
 
       diffyNotj <- Yk[ , -j] - XObsk %*% betaObsNotj - bSubNotj  # N x p - 1
@@ -76,7 +98,9 @@ update_bSubLC_fast <- function(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XO
       likTempk <- (Yk[ , j] - XObsk %*% betaObs[[j]][ , k] - t(as.vector(R[j, -j]) %*% t(diffyNotj))) / condVarYj
 
       # Prior contribution
-      priorTempk <- XSubk %*% betaSub[[j]][ , , k] %*% solve(Psijk)
+      ### Changed on April 26, 2022
+      #priorTempk <- XSubk %*% betaSub[[j]][ , , k] %*% solve(Psijk)
+      priorTempk <- XSub %*% betaSub[[j]][ , , k] %*% solve(Psijk)
 
       # Now calculate the updated random effects for subjects in class k using sapply
       tempValues[ind_sub, ] <- t(sapply(unique(subjectIDk), function(x) {
@@ -90,7 +114,10 @@ update_bSubLC_fast <- function(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XO
 
         # Posterior mean
         likTempkObs <- likTempk[selObs]
-        priorkObs <- priorTempk[which(unique(subjectIDk) == x)]
+
+        ### Changed on April 26, 2022
+        #priorkObs <- priorTempk[which(unique(subjectIDk) == x)]
+        priorkObs <- priorTempk[x, ]
         likkObs <- t(XRekObs) %*% likTempkObs
         post_mean <- post_var %*% (likkObs + priorkObs)
 

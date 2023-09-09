@@ -4,8 +4,19 @@
 \alias{update_bSubLC_fast}
 \title{Update subject level random effects \code{bSub}.}
 \usage{
-update_bSubLC_fast(C, bSub, betaObs, betaSub, Psi, Sigma, Y, XRe, XObs,
-  XSub, subjectID)
+update_bSubLC_fast(
+  C,
+  bSub,
+  betaObs,
+  betaSub,
+  Psi,
+  Sigma,
+  Y,
+  XRe,
+  XObs,
+  XSub,
+  subjectID
+)
 }
 \value{
 A \code{J}-element list for each of \code{Y1,\dots,YJ}, with each element containing a vector of stacked subject level random effects, updated conditional on latent class membership.

@@ -1,6 +1,7 @@
 #' @title Update regression coefficients \code{delta} in a binary probit model.
 #'
 #' @description This uses a normal prior distribution to update the regression coefficients in the probit model.
+#' @export
 #' @return An \code{m} by 1 vector of regression coefficients in the binary probit model.
 update_delta_BinaryP <- function(Z, delta, W, prior.mu, prior.Sigma){
 
